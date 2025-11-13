@@ -46,12 +46,12 @@ jobs:
             -F chat_id="$TELEGRAM_CHAT_ID" \
             -F document=@"$apk" \
             -F caption="🚀 New Build v$VERSION
-
-📱 Branch: ${{ github.ref_name }}
-📅 Date: $(date +'%Y-%m-%d %H:%M')
-🔗 Commit: $COMMIT_MSG
-
-Built with GitHub Actions" \
+        
+        📱 Branch: ${{ github.ref_name }}
+        📅 Date: $(date +'%Y-%m-%d %H:%M')
+        🔗 Commit: $COMMIT_MSG
+        
+        Built with GitHub Actions" \
             && echo "✅ File sent successfully" \
             || echo "❌ Failed to send file"
         done
