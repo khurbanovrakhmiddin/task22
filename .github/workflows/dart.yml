@@ -1,11 +1,11 @@
-name: Build and Notify
+name: Build and Telegram Notify
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build-and-notify:
+  build:
     runs-on: ubuntu-latest
     
     steps:
@@ -19,45 +19,32 @@ jobs:
       run: flutter pub get
 
     - name: Build APK
-      run: flutter build apk --release --split-per-abi
+      run: flutter build apk --release
 
-    - name: Debug - Check secrets
-      run: |
-        echo "Checking secrets..."
-        echo "TELEGRAM_BOT_TOKEN exists: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}"
-        echo "TELEGRAM_CHAT_ID exists: ${{ secrets.TELEGRAM_CHAT_ID != '' }}"
+    - name: Send Telegram Notification
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_CHAT_ID }}
+        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        message: |
+          🚀 New Build Completed!
+          
+          📱 Repository: ${{ github.repository }}
+          🌿 Branch: ${{ github.ref_name }}
+          📝 Commit: ${{ github.event.head_commit.message }}
+          👤 Author: ${{ github.event.head_commit.author.name }}
+          
+          ✅ APK built successfully!
+        format: markdown
 
-    - name: Send to Telegram
-      if: secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != ''
+    - name: Upload APK to Telegram
+      if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
       env:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
-        echo "Sending APK to Telegram..."
-        
-        # Получаем информацию о версии
         VERSION=$(grep 'version:' pubspec.yaml | cut -d' ' -f2)
-        COMMIT_MSG="${{ github.event.head_commit.message }}"
-        
-        for apk in build/app/outputs/flutter-apk/*.apk; do
-          echo "📤 Sending $apk"
-          curl -s -X POST \
-            "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendDocument" \
-            -F chat_id="$TELEGRAM_CHAT_ID" \
-            -F document=@"$apk" \
-            -F caption="🚀 New Build v$VERSION
-        
-        📱 Branch: ${{ github.ref_name }}
-        📅 Date: $(date +'%Y-%m-%d %H:%M')
-        🔗 Commit: $COMMIT_MSG
-        
-        Built with GitHub Actions" \
-            && echo "✅ File sent successfully" \
-            || echo "❌ Failed to send file"
-        done
-
-    - name: Notify if no secrets
-      if: secrets.TELEGRAM_BOT_TOKEN == '' || secrets.TELEGRAM_CHAT_ID == ''
-      run: |
-        echo "⚠️ Telegram secrets not configured"
-        echo "Please set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in repository secrets"
+        curl -F chat_id="$TELEGRAM_CHAT_ID" \
+             -F document=@"./build/app/outputs/flutter-apk/app-release.apk" \
+             -F caption="📦 APK v$VERSION" \
+             "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendDocument"
