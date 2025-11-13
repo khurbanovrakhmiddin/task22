@@ -35,8 +35,6 @@ class AudioSessionService {
     );
 
     await prefs.setString(_sessionKey, jsonEncode(session.toJson()));
-
-    print('💾 Сохранен трек: ${audio.title}, позиция: ${position.inSeconds}с');
   }
 
   // Загрузить сохраненный трек
@@ -49,7 +47,6 @@ class AudioSessionService {
       final sessionData = jsonDecode(sessionJson);
       final session = AudioSessionModel.fromJson(sessionData);
 
-      // Проверяем не устарели ли данные (больше 24 часов)
       final now = DateTime.now();
       final difference = now.difference(session.lastPlayed);
       if (difference.inHours > 24) {
@@ -60,7 +57,6 @@ class AudioSessionService {
       print('📂 Загружен сохраненный трек: ${session.title}');
       return session;
     } catch (e) {
-      print('❌ Ошибка загрузки сохраненного трека: $e');
       return null;
     }
   }
