@@ -8,23 +8,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: subosito/flutter-action@v2
-    - run: flutter pub get
-    - run: flutter build apk --release
-    
-    - name: Send to Telegram
-      run: |
-        # Проверяем секреты
-        if [ -z "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] || [ -z "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
-          echo "Skipping Telegram - secrets not set"
-          exit 0
-        fi
-        
-        VERSION=$(grep 'version:' pubspec.yaml | cut -d' ' -f2)
-        
-        curl -s -X POST \
-          "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
-          -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -F document=@"build/app/outputs/flutter-apk/app-release.apk" \
-          -F caption="New build v$VERSION"
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - name: Send to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "Skipping Telegram - secrets not set"
+            exit 0
+          fi
+          
+          VERSION=$(grep 'version:' pubspec.yaml | cut -d' ' -f2)
+          
+          curl -s -X POST \
+            "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendDocument" \
+            -F chat_id="$TELEGRAM_CHAT_ID" \
+            -F document=@"build/app/outputs/flutter-apk/app-release.apk" \
+            -F caption="New build v$VERSION"
