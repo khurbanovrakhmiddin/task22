@@ -1,4 +1,4 @@
-name: Build and Telegram Notify
+name: Telegram Build Notify
 
 on:
   push:
@@ -7,44 +7,24 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-
-    - name: Install dependencies
-      run: flutter pub get
-
-    - name: Build APK
-      run: flutter build apk --release
-
-    - name: Send Telegram Notification
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_CHAT_ID }}
-        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        message: |
-          🚀 New Build Completed!
-          
-          📱 Repository: ${{ github.repository }}
-          🌿 Branch: ${{ github.ref_name }}
-          📝 Commit: ${{ github.event.head_commit.message }}
-          👤 Author: ${{ github.event.head_commit.author.name }}
-          
-          ✅ APK built successfully!
-        format: markdown
-
-    - name: Upload APK to Telegram
-      if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
-      env:
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    - uses: actions/checkout@v4
+    - uses: subosito/flutter-action@v2
+    - run: flutter pub get
+    - run: flutter build apk --release
+    
+    - name: Send to Telegram
       run: |
+        # Проверяем секреты
+        if [ -z "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] || [ -z "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+          echo "Skipping Telegram - secrets not set"
+          exit 0
+        fi
+        
         VERSION=$(grep 'version:' pubspec.yaml | cut -d' ' -f2)
-        curl -F chat_id="$TELEGRAM_CHAT_ID" \
-             -F document=@"./build/app/outputs/flutter-apk/app-release.apk" \
-             -F caption="📦 APK v$VERSION" \
-             "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendDocument"
+        
+        curl -s -X POST \
+          "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+          -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -F document=@"build/app/outputs/flutter-apk/app-release.apk" \
+          -F caption="New build v$VERSION"
