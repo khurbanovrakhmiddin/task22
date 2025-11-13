@@ -109,10 +109,10 @@ class AudioPlayerService {
       title: audio.title,
       artist: audio.artist ?? 'Unknown Artist',
       album: audio.album ?? 'Unknown Album',
-      artUri:  null,
+      artUri: null,
 
       //Vremenno
-     // artUri: audio.artUri != null ? Uri.parse(audio.artUri!) : null,
+      // artUri: audio.artUri != null ? Uri.parse(audio.artUri!) : null,
       duration: Duration.zero,
     );
 
@@ -153,10 +153,10 @@ class AudioPlayerService {
         _player.setAudioSources(
           sources.map((e) => _createAudioSource(e)).toList(),
           initialIndex: audio,
-          initialPosition: Duration(seconds: position??0)
+          initialPosition: Duration(seconds: position ?? 0),
         ),
         setupAudioSession(),
-         _player.play(),
+        _player.play(),
       ]);
 
       return true;

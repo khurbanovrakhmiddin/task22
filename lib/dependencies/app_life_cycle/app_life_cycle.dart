@@ -41,6 +41,5 @@ class AppLifecycleObserver extends WidgetsBindingObserver {
   }
 
   void _restoreSession() {
-    // Автоматически восстанавливается в BLoC
   }
 }
