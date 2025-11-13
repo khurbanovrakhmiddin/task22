@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 class AppImage extends StatelessWidget {
@@ -22,6 +24,10 @@ class AppImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+
+
+
     // Если image не передан
     if (image == null || image!.isEmpty) {
       return _buildErrorWidget();

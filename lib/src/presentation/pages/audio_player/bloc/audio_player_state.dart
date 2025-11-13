@@ -15,6 +15,7 @@ class AudioPlayerState extends Equatable {
   final String? errorMessage;
   final bool isLoading;
   final bool shuffle;
+  final bool reverse;
 
   const AudioPlayerState({
     this.fetchStatus = FetchStatus.initial,
@@ -28,6 +29,7 @@ class AudioPlayerState extends Equatable {
     this.errorMessage,
     this.isLoading = false,
     this.shuffle = false,
+    this.reverse = false,
   });
 
   bool get hasError => errorMessage != null;
@@ -38,6 +40,7 @@ class AudioPlayerState extends Equatable {
     fetchStatus,
     playerStatus,
     audioFiles,
+    reverse,
     shuffle,
     currentIndex,
     currentAudio,
@@ -59,6 +62,7 @@ class AudioPlayerState extends Equatable {
     Duration? duration,
     String? errorMessage,
     bool? isLoading,
+    bool? reverse,
     bool? shuffle,
   }) {
     return AudioPlayerState(
@@ -66,9 +70,10 @@ class AudioPlayerState extends Equatable {
       playerStatus: playerStatus ?? this.playerStatus,
       audioFiles: audioFiles ?? this.audioFiles,
       currentIndex: currentIndex ?? this.currentIndex,
-      lastAudio: lastAudio ?? this.lastAudio,
+      lastAudio:currentIndex == -1? null:lastAudio ?? this.lastAudio,
       currentAudio:currentIndex == -1? currentAudio:currentAudio??this.currentAudio,
       position: position ?? this.position,
+      reverse: reverse ?? this.reverse,
       shuffle: shuffle ?? this.shuffle,
       duration: duration ?? this.duration,
       errorMessage: errorMessage ?? this.errorMessage,

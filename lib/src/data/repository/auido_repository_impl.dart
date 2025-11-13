@@ -1,99 +1,67 @@
 import 'dart:async';
 
-import '../../../core/sevices/download_service.dart';
+import 'package:tak22_audio/src/domain/request/audio_local_data_source.dart';
 import '../../domain/entities/audio_entity.dart';
 import '../../domain/repository/audio_repository.dart';
 import '../../domain/request/audio_remote_data_source.dart';
+import '../model/audio_session_model.dart';
 
 class AudioRepositoryImpl implements AudioRepository {
   final AudioRemoteDataSource dataSource;
-  final DownloadService downloadService;
+  final AudioLocalDataSource localSource;
 
-  AudioRepositoryImpl(this.dataSource, this.downloadService);
+  AudioRepositoryImpl(this.dataSource, this.localSource);
 
   @override
   Future<List<AudioMetadataEntity>> getAudios() async {
-    return await dataSource.fetchAudios();
-  }
-
-  final Map<String, StreamController<double>> _progressControllers = {};
-
-  @override
-  Future<void> downloadAudio(AudioMetadataEntity audio) async {
-    final fileName = '${audio.id}.mp3';
-
-    final isDownloaded = await downloadService.fileExists(fileName);
-    if (isDownloaded) {
-      _progressControllers[audio.id]?.add(1.0);
-      return;
-    }
-
-    final controller = StreamController<double>();
-    _progressControllers[audio.id] = controller;
-
     try {
-      if (downloadService.isAssetPath(audio.assetPath)) {
-        await downloadService.copyAssetToLocal(
-          audio.assetPath,
-          fileName,
-          audio.id,
-        );
-      } else {
-        throw Exception('Only asset downloads are supported');
+      final hasLocal = await hasLocalData();
+
+      if (hasLocal) {
+        final localAudios = await localSource.loadPlaylist();
+        if (localAudios.isNotEmpty) {
+          //Random Image
+          return localAudios.map((e) => e.copyWith(artUri: getImage())).toList();
+        }
       }
+
+      final remoteAudios = await dataSource.fetchAudios();
+
+      await localSource.savePlaylist(remoteAudios);
+
+      return remoteAudios;
     } catch (e) {
-      controller.addError(e);
+      final localAudios = await localSource.loadPlaylist();
+      if (localAudios.isNotEmpty) {
+        return localAudios.map((e) => e.copyWith(artUri: getImage())).toList();
+      }
+
       rethrow;
     }
   }
 
   @override
-  Stream<double> getDownloadProgress(String audioId) {
-    if (!_progressControllers.containsKey(audioId)) {
-      _progressControllers[audioId] = StreamController<double>.broadcast();
+  Future<List<AudioMetadataEntity>> refreshAudios() async {
+    try {
+      print('🔄 Принудительное обновление аудио');
+      final remoteAudios = await dataSource.fetchAudios();
+
+      // Сохраняем новые данные
+      await localSource.savePlaylist(remoteAudios);
+
+      return remoteAudios;
+    } catch (e) {
+      print('❌ Ошибка при обновлении аудио: $e');
+
+      // В случае ошибки возвращаем локальные данные
+      final localAudios = await localSource.loadPlaylist();
+      return localAudios;
     }
-    return _progressControllers[audioId]!.stream;
   }
 
   @override
-  Future<void> deleteDownloadedAudio(AudioMetadataEntity audio) async {
-    final fileName = '${audio.id}.mp3';
-    await downloadService.deleteFile(fileName);
-
-    _progressControllers[audio.id]?.close();
-    _progressControllers.remove(audio.id);
-  }
-
-  @override
-  Future<String?> getLocalAudioPath(AudioMetadataEntity audio) async {
-    final fileName = '${audio.id}.mp3';
-    final exists = await downloadService.fileExists(fileName);
-    if (exists) {
-      return await downloadService.getFilePath(fileName);
-    }
-    return null;
-  }
-
-  @override
-  Future<String> getAudioPath(AudioMetadataEntity audio) async {
-    final localPath = await getLocalAudioPath(audio);
-    return localPath ?? audio.assetPath;
-  }
-
-  @override
-  Future<bool> isAudioDownloaded(AudioMetadataEntity audio) async {
-    final fileName = '${audio.id}.mp3';
-    return await downloadService.fileExists(fileName);
-  }
-
-  void updateProgress(String audioId, double progress) {
-    _progressControllers[audioId]?.add(progress);
-  }
-
-  void dispose() {
-    for (final controller in _progressControllers.values) {
-      controller.close();
-    }
-    _progressControllers.clear();
+  Future<bool> hasLocalData() async {
+    final localAudios = await localSource.loadPlaylist();
+    return localAudios.isNotEmpty;
   }
 }

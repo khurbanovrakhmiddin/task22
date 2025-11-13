@@ -1,4 +1,6 @@
- import 'package:equatable/equatable.dart';
+ import 'dart:math' show Random;
+
+import 'package:equatable/equatable.dart';
 
 class AudioSessionModel extends Equatable {
   final String audioId;
@@ -7,8 +9,8 @@ class AudioSessionModel extends Equatable {
   final String? artist;
   final String? album;
   final String? artUri;
-  final Duration position;
-  final Duration duration;
+  final int? position;
+  final int? duration;
   final bool isPlaying;
   final DateTime lastPlayed;
 
@@ -33,8 +35,8 @@ class AudioSessionModel extends Equatable {
       'artist': artist,
       'album': album,
       'artUri': artUri,
-      'position': position.inMilliseconds,
-      'duration': duration.inMilliseconds,
+      'position': position,
+      'duration': duration,
       'isPlaying': isPlaying,
       'lastPlayed': lastPlayed.toIso8601String(),
     };
@@ -47,9 +49,9 @@ class AudioSessionModel extends Equatable {
       title: json['title'],
       artist: json['artist'],
       album: json['album'],
-      artUri: json['artUri'],
-      position: Duration(milliseconds: json['position']),
-      duration: Duration(milliseconds: json['duration']),
+      artUri: getImage(),
+      position: json['position'],
+      duration:  json['duration'],
       isPlaying: json['isPlaying'],
       lastPlayed: DateTime.parse(json['lastPlayed']),
     );
@@ -62,8 +64,8 @@ class AudioSessionModel extends Equatable {
     String? artist,
     String? album,
     String? artUri,
-    Duration? position,
-    Duration? duration,
+    int? position,
+    int? duration,
     bool? isPlaying,
     DateTime? lastPlayed,
   }) {
@@ -95,3 +97,16 @@ class AudioSessionModel extends Equatable {
     lastPlayed,
   ];
 }
+
+
+ List<String> _images = [
+   "assets/img/1.png",
+   "assets/img/2.png",
+   "assets/img/3.png",
+   "assets/img/4.png",
+ ];
+
+ String getImage() {
+   final random = Random();
+   return _images[random.nextInt(_images.length)];
+ }

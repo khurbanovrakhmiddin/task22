@@ -1,11 +1,10 @@
-import 'package:bloc/bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:tak22_audio/core/sevices/audio_session_service.dart';
 import 'package:tak22_audio/src/domain/usecases/get_audio_usecase.dart';
 import 'package:tak22_audio/src/presentation/bloc/audio_bloc.dart';
-
-import '../../../../../core/di/injector_impl.dart';
+import '../../../../../core/container/di/injector_impl.dart';
 import '../../../../../core/sevices/player_service.dart';
 import '../../../../domain/entities/audio_entity.dart';
 
@@ -38,6 +37,7 @@ class AudioPlayerBloc extends Bloc<AudioPlayerEvent, AudioPlayerState> {
     on<PositionUpdatedEvent>(_onPositionUpdated);
     on<PlayerErrorEvent>(_onPlayerError);
     on<PlayerStopEvent>(_onStop);
+    on<ReverseAudioEvent>(_onReverse);
     on<ReloadLastAudiosEvent>(_onReload);
     on<TrackIndexChangedEvent>(_onTrackIndexChanged);
 
@@ -146,6 +146,8 @@ class AudioPlayerBloc extends Bloc<AudioPlayerEvent, AudioPlayerState> {
 
       if (savedSession != null) {
         // Восстанавливаем состояние из сохраненной сессии
+
+        print("savedSession.position${savedSession.position}");
         emit(
           state.copyWith(
             fetchStatus: FetchStatus.success,
@@ -155,12 +157,13 @@ class AudioPlayerBloc extends Bloc<AudioPlayerEvent, AudioPlayerState> {
               id: savedSession.audioId,
               title: savedSession.title,
               artist: savedSession.artist ?? '',
+              duration: savedSession.position,
               album: savedSession.album,
               artUri: savedSession.artUri,
               assetPath: savedSession.audioPath,
             ),
-            position: savedSession.position,
-            duration: savedSession.duration,
+            position: Duration(seconds: savedSession.position ?? 0),
+            duration: Duration(seconds: savedSession.duration ?? 0),
             playerStatus: savedSession.isPlaying
                 ? PlayerStatus.play
                 : PlayerStatus.pause,
@@ -175,7 +178,7 @@ class AudioPlayerBloc extends Bloc<AudioPlayerEvent, AudioPlayerState> {
           ),
         );
       }
-      
+
       di.get<AudioBloc>().add(InitializeAudioEvent(audios));
     } catch (e) {
       emit(
@@ -213,11 +216,25 @@ class AudioPlayerBloc extends Bloc<AudioPlayerEvent, AudioPlayerState> {
     );
 
     try {
-      final result = await _audioService.playAudio(
-        event.index,
-        state.audioFiles,
-      );
-      emit(state.copyWith(playerStatus: PlayerStatus.play, isLoading: !result));
+      if (event.reload) {
+        final result = await _audioService.reloadLastAudio(
+          event.index,
+          state.audioFiles,
+          state.lastAudio?.duration,
+        );
+        await _sessionService.clearCurrentAudio();
+        emit(
+          state.copyWith(playerStatus: PlayerStatus.play, isLoading: !result),
+        );
+      } else {
+        final result = await _audioService.playAudio(
+          event.index,
+          state.audioFiles,
+        );
+        emit(
+          state.copyWith(playerStatus: PlayerStatus.play, isLoading: !result),
+        );
+      }
     } catch (e) {
       emit(
         state.copyWith(
@@ -255,7 +272,11 @@ class AudioPlayerBloc extends Bloc<AudioPlayerEvent, AudioPlayerState> {
     NextAudioEvent event,
     Emitter<AudioPlayerState> emit,
   ) async {
-    await _audioService.seekToNext();
+    if (state.audioFiles.length - 1 == state.currentIndex && state.reverse) {
+      add(PlayAudioEvent(0));
+    } else {
+      await _audioService.seekToNext();
+    }
     // final nextIndex = (state.currentIndex + 1) % state.audioFiles.length;
     // add(PlayAudioEvent(nextIndex));
   }
@@ -289,6 +310,13 @@ class AudioPlayerBloc extends Bloc<AudioPlayerEvent, AudioPlayerState> {
     }
   }
 
+  Future<void> _onReverse(
+    ReverseAudioEvent event,
+    Emitter<AudioPlayerState> emit,
+  ) async {
+    emit(state.copyWith(reverse: !state.reverse));
+  }
+
   Future<void> _onResetError(
     ResetErrorEvent event,
     Emitter<AudioPlayerState> emit,
@@ -314,14 +342,31 @@ class AudioPlayerBloc extends Bloc<AudioPlayerEvent, AudioPlayerState> {
     PlayerStopEvent event,
     Emitter<AudioPlayerState> emit,
   ) async {
+    final isLastAudioMode =
+        state.currentAudio == null && state.lastAudio != null;
+
     await _audioService.stop();
-    emit(
-      state.copyWith(
-        playerStatus: PlayerStatus.stop,
-        currentIndex: -1,
-        currentAudio: null,
-      ),
-    );
+    if(isLastAudioMode){
+      await _sessionService.clearCurrentAudio();
+      emit(
+        state.copyWith(
+          playerStatus: PlayerStatus.stop,
+          currentIndex: -1,
+          currentAudio: null,
+        ),
+      );
+    }else{
+      emit(
+        state.copyWith(
+          playerStatus: PlayerStatus.stop,
+          currentIndex: -1,
+          currentAudio: null,
+        ),
+      );
+    }
+
+
+
   }
 
   Future<void> _onReload(
@@ -332,7 +377,7 @@ class AudioPlayerBloc extends Bloc<AudioPlayerEvent, AudioPlayerState> {
       (e) => e.id == state.lastAudio?.id,
     );
     if (index != -1) {
-      add(PlayAudioEvent(index));
+      add(PlayAudioEvent(index, true));
     }
   }
 

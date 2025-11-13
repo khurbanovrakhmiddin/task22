@@ -1,15 +1,7 @@
+// audio_state.dart
 part of 'audio_bloc.dart';
 
-abstract class AudioState extends Equatable {
-  const AudioState();
-
-  @override
-  List<Object> get props => [];
-}
-
-class AudioInitial extends AudioState {}
-
-class AudioReady extends AudioState {
+class AudioState extends Equatable {
   final List<AudioMetadataEntity> allAudio;
   final List<AudioMetadataEntity> filteredAudio;
   final String searchQuery;
@@ -17,8 +9,8 @@ class AudioReady extends AudioState {
   final bool isLoading;
   final String? errorMessage;
 
-  const AudioReady({
-    required this.allAudio,
+  const AudioState({
+    this.allAudio = const [],
     this.filteredAudio = const [],
     this.searchQuery = '',
     this.downloadProgress = const {},
@@ -26,13 +18,11 @@ class AudioReady extends AudioState {
     this.errorMessage,
   });
 
+  factory AudioState.initial() => const AudioState();
+
   List<AudioMetadataEntity> get audioList {
     final audioToShow = filteredAudio.isNotEmpty ? filteredAudio : allAudio;
-
-    return audioToShow.map((audio) {
-      final progress = downloadProgress[audio.id];
-      return progress != null ? audio.copyWith(downloadProgress: progress) : audio;
-    }).toList();
+    return audioToShow;
   }
 
   List<AudioMetadataEntity> get downloadedAudio {
@@ -44,8 +34,9 @@ class AudioReady extends AudioState {
 
   bool get hasDownloads => downloadedAudio.isNotEmpty;
   bool get isSearching => searchQuery.isNotEmpty;
+  bool get hasError => errorMessage != null && errorMessage!.isNotEmpty;
 
-  AudioReady copyWith({
+  AudioState copyWith({
     List<AudioMetadataEntity>? allAudio,
     List<AudioMetadataEntity>? filteredAudio,
     String? searchQuery,
@@ -53,7 +44,7 @@ class AudioReady extends AudioState {
     bool? isLoading,
     String? errorMessage,
   }) {
-    return AudioReady(
+    return AudioState(
       allAudio: allAudio ?? this.allAudio,
       filteredAudio: filteredAudio ?? this.filteredAudio,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -63,25 +54,36 @@ class AudioReady extends AudioState {
     );
   }
 
-  AudioReady updateDownloadProgress(String audioId, double progress) {
+  AudioState updateDownloadProgress(String audioId, double progress) {
     final updatedProgress = Map<String, double>.from(downloadProgress);
     updatedProgress[audioId] = progress;
     return copyWith(downloadProgress: updatedProgress);
   }
 
-  AudioReady removeDownloadProgress(String audioId) {
+  AudioState removeDownloadProgress(String audioId) {
     final updatedProgress = Map<String, double>.from(downloadProgress);
     updatedProgress.remove(audioId);
     return copyWith(downloadProgress: updatedProgress);
   }
 
+  AudioState clearError() {
+    return copyWith(errorMessage: null);
+  }
+
+  AudioState clearSearch() {
+    return copyWith(
+      filteredAudio: allAudio,
+      searchQuery: '',
+    );
+  }
+
   @override
-  List<Object> get props => [
+  List<Object?> get props => [
     allAudio,
     filteredAudio,
     searchQuery,
     downloadProgress,
     isLoading,
-    errorMessage ?? '',
+    errorMessage,
   ];
 }

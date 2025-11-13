@@ -109,7 +109,10 @@ class AudioPlayerService {
       title: audio.title,
       artist: audio.artist ?? 'Unknown Artist',
       album: audio.album ?? 'Unknown Album',
-      artUri: audio.artUri != null ? Uri.parse(audio.artUri!) : null,
+      artUri:  null,
+
+      //Vremenno
+     // artUri: audio.artUri != null ? Uri.parse(audio.artUri!) : null,
       duration: Duration.zero,
     );
 
@@ -140,6 +143,29 @@ class AudioPlayerService {
     }
   }
 
+  Future<bool> reloadLastAudio(
+    int audio,
+    List<AudioMetadataEntity> sources,
+    int? position,
+  ) async {
+    try {
+      await Future.wait([
+        _player.setAudioSources(
+          sources.map((e) => _createAudioSource(e)).toList(),
+          initialIndex: audio,
+          initialPosition: Duration(seconds: position??0)
+        ),
+        setupAudioSession(),
+         _player.play(),
+      ]);
+
+      return true;
+    } catch (e) {
+      print('Play audio error: $e');
+      rethrow;
+    }
+  }
+
   // Методы для навигации по плейлисту
   Future<void> playAtIndex(int index) async {
     if (index >= 0 && index < _playlist.length) {
@@ -161,10 +187,11 @@ class AudioPlayerService {
     }
   }
 
-  Future<void> seekToNext() async=>await _player.seekToNext();
-  Future<void> seekToPrev()async =>await _player.seekToPrevious();
-  Future<void> previous() async {
+  Future<void> seekToNext() async => await _player.seekToNext();
 
+  Future<void> seekToPrev() async => await _player.seekToPrevious();
+
+  Future<void> previous() async {
     if (_playlist.isEmpty) return;
 
     final currentPosition = _player.position;

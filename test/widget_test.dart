@@ -19,11 +19,10 @@ void main() async {
   late AudioMetadataEntity testAudio;
   late AudioSessionModel testSession;
 
-  setUp(() {
-    // Инициализируем SharedPreferences для тестов
-    SharedPreferences.setMockInitialValues({});
-
-    audioSessionService = AudioSessionService();
+  setUp(() async {
+     SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    audioSessionService = AudioSessionService(prefs);
 
     testAudio = AudioMetadataEntity(
       id: 'test_audio_1',
@@ -41,8 +40,8 @@ void main() async {
       artist: testAudio.artist,
       album: testAudio.album,
       artUri: testAudio.artUri,
-      position: Duration(seconds: 120),
-      duration: Duration(seconds: 300),
+      position: 120,
+      duration: 300,
       isPlaying: true,
       lastPlayed: DateTime.now(),
     );
@@ -64,7 +63,7 @@ void main() async {
       expect(loadedSession, isNotNull);
       expect(loadedSession!.audioId, equals(testAudio.id));
       expect(loadedSession.title, equals(testAudio.title));
-      expect(loadedSession.position.inSeconds, equals(120));
+      expect(loadedSession.position, equals(120));
       expect(loadedSession.isPlaying, isTrue);
     });
 
@@ -143,7 +142,7 @@ void main() async {
       );
 
       final loadedSession = await audioSessionService.loadCurrentAudio();
-      expect(loadedSession!.position.inSeconds, equals(0));
+      expect(loadedSession!.position, equals(0));
     });
 
     test('Сохранение с максимальной длительностью', () async {
@@ -155,7 +154,7 @@ void main() async {
       );
 
       final loadedSession = await audioSessionService.loadCurrentAudio();
-      expect(loadedSession!.duration.inHours, equals(2));
+      expect(loadedSession!.duration, equals(2));
     });
   });
 }

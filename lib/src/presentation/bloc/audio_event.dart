@@ -39,3 +39,4 @@ class UpdateDownloadProgressEvent extends AudioEvent {
 }
 
 class ClearSearchEvent extends AudioEvent {}
+class ClearErrorEvent extends AudioEvent {}

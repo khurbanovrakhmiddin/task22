@@ -20,8 +20,9 @@ class TrackIndexChangedEvent extends AudioPlayerEvent {
 }
 class PlayAudioEvent extends AudioPlayerEvent {
   final int index;
+  final bool reload;
 
-  const PlayAudioEvent(this.index);
+  const PlayAudioEvent(this.index,[this.reload = false]);
 
   @override
   List<Object> get props => [index];
@@ -32,6 +33,7 @@ class ErrorStatusAudioEvent extends AudioPlayerEvent {}
 
 
 class NextAudioEvent extends AudioPlayerEvent {}
+class ReverseAudioEvent extends AudioPlayerEvent {}
 
 class PreviousAudioEvent extends AudioPlayerEvent {}
 

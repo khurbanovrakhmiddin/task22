@@ -41,6 +41,10 @@ flutter:
 
   assets:
      - assets/audio/
+     - assets/img/1.png
+     - assets/img/2.png
+     - assets/img/3.png
+     - assets/img/4.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

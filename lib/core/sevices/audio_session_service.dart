@@ -1,7 +1,6 @@
 // audio_session_service.dart
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tak22_audio/src/domain/entities/audio_entity.dart';
@@ -9,6 +8,9 @@ import 'package:tak22_audio/src/domain/entities/audio_entity.dart';
 import '../../src/data/model/audio_session_model.dart';
 
 class AudioSessionService {
+  const AudioSessionService(this.prefs);
+
+  final SharedPreferences prefs;
   static const String _sessionKey = 'current_audio_session';
   static const String _playlistKey = 'audio_playlist';
 
@@ -26,13 +28,12 @@ class AudioSessionService {
       artist: audio.artist,
       album: audio.album,
       artUri: audio.artUri,
-      position: position,
-      duration: duration,
+      position: position.inSeconds,
+      duration: duration.inSeconds,
       isPlaying: isPlaying,
       lastPlayed: DateTime.now(),
     );
 
-    final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_sessionKey, jsonEncode(session.toJson()));
 
     print('💾 Сохранен трек: ${audio.title}, позиция: ${position.inSeconds}с');
@@ -41,7 +42,6 @@ class AudioSessionService {
   // Загрузить сохраненный трек
   Future<AudioSessionModel?> loadCurrentAudio() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final sessionJson = prefs.getString(_sessionKey);
 
       if (sessionJson == null) return null;
@@ -67,7 +67,6 @@ class AudioSessionService {
 
   // Очистить сохраненный трек
   Future<void> clearCurrentAudio() async {
-    final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessionKey);
     print('🧹 Очищен сохраненный трек');
   }
@@ -78,21 +77,24 @@ class AudioSessionService {
     print('💾 Сохранен плейлист: ${playlist.length} треков');
   }
 
-  Future<void> _save(List<AudioMetadataEntity> playlist)async{
-    final prefs = await SharedPreferences.getInstance();
-    final playlistJson = jsonEncode(playlist.map((audio) => _audioToJson(audio)).toList());
+  Future<void> _save(List<AudioMetadataEntity> playlist) async {
+    final playlistJson = jsonEncode(
+      playlist.map((audio) => _audioToJson(audio)).toList(),
+    );
     await prefs.setString(_playlistKey, playlistJson);
   }
+
   // Загрузить плейлист
   Future<List<AudioMetadataEntity>> loadPlaylist() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final playlistJson = prefs.getString(_playlistKey);
 
       if (playlistJson == null) return [];
 
       final playlistData = jsonDecode(playlistJson) as List;
-      final playlist = playlistData.map((json) => _audioFromJson(json)).toList();
+      final playlist = playlistData
+          .map((json) => _audioFromJson(json))
+          .toList();
 
       print('📂 Загружен плейлист: ${playlist.length} треков');
       return playlist;
